@@ -1,101 +1,158 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Player from './Player';
 import { fetchHome } from './services/api';
-
-const defaultPoster = '/public/icon.svg';
+import Search from './Search';
+import Library from './Library';
+import { FocusProvider } from './FocusManager';
 
 function App(){
   const [data, setData] = useState(null);
   const [active, setActive] = useState(0);
   const [selectedRow, setSelectedRow] = useState(0);
-  const [player, setPlayer] = useState(null); // {src, title}
+  const [player, setPlayer] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [view, setView] = useState('home'); // home | search | library
 
   useEffect(() => {
     let mounted = true;
-    fetchHome().then(d => { if(mounted) setData(d); }).catch(()=>{});
-    return ()=>{ mounted = false; };
+    fetchHome().then((d) => {
+      if (mounted) setData(d);
+    }).catch(() => {});
+    return () => { mounted = false; };
   }, []);
 
-  const featured = useMemo(()=> data?.featured || [{id:1,title:'Loading...', color:'#22c55e'}], [data]);
-  const rows = useMemo(()=> data?.rows || [], [data]);
+  const featured = useMemo(() => data?.featured || [{ id: 1, title: 'Loading...', color: '#22c55e', src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' }], [data]);
+  const rows = useMemo(() => data?.rows || [], [data]);
+
+  const openDetails = (item) => {
+    setSelectedMedia({
+      id: item.id,
+      title: item.title,
+      label: item.label || 'Featured',
+      description: item.description || 'Enjoy premium content with a seamless TV-first experience.',
+      src: item.src,
+      poster: item.poster,
+      color: item.color || '#22c55e'
+    });
+  };
+
+  const openPlayer = (item) => {
+    setPlayer({ src: item.src, title: item.title, poster: item.poster || '' });
+  };
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div className="brand-wrap">
-          <div className="brand-mark">P</div>
-          <div>
-            <div className="brand-name">PlayTorrio</div>
-            <div className="brand-sub">TV Experience</div>
-          </div>
-        </div>
-
-        <nav className="nav" aria-label="main navigation">
-          {['Home', 'Movies', 'Series', 'Manga', 'Music', 'Live TV'].map((item, index) => (
-            <button
-              key={item}
-              className={`nav-item ${index === selectedRow ? 'nav-item-active' : ''}`}
-              onClick={() => setSelectedRow(index)}
-              type="button"
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
-      </header>
-
-      <main className="content">
-        <section className="hero" style={{ background: `linear-gradient(135deg, ${featured[active]?.color || '#22c55e'}, rgba(15,23,42,0.5))` }}>
-          <div className="hero-copy">
-            <div className="eyebrow">{featured[active]?.label || 'Featured'}</div>
-            <h1>{featured[active]?.title}</h1>
-            <p>
-              Discover movies, series, manga, audiobooks, or music in one streaming center built for a living room experience.
-            </p>
-            <div className="hero-actions">
-              <button type="button" className="primary-btn" onClick={() => { setPlayer({ src: featured[active]?.src, title: featured[active]?.title, poster: featured[active]?.poster }); }}>Play</button>
-              <button type="button" className="secondary-btn" onClick={() => { alert('Open details (not implemented)'); }}>Details</button>
+    <FocusProvider>
+      <div className="app-shell">
+        <header className="topbar">
+          <div className="brand-wrap">
+            <div className="brand-mark">P</div>
+            <div>
+              <div className="brand-name">PlayTorrio</div>
+              <div className="brand-sub">TV Experience</div>
             </div>
           </div>
 
-          <div className="hero-poster" aria-label="feature poster" />
-        </section>
+          <nav className="nav" aria-label="main navigation">
+            <button className={`nav-item ${view === 'home' ? 'nav-item-active' : ''}`} onClick={() => setView('home')}>Home</button>
+            <button className={`nav-item ${view === 'library' ? 'nav-item-active' : ''}`} onClick={() => setView('library')}>Library</button>
+            <button className={`nav-item ${view === 'search' ? 'nav-item-active' : ''}`} onClick={() => setView('search')}>Search</button>
+            <button className={`nav-item`} onClick={() => { alert('Profile/Settings coming soon'); }}>Profile</button>
+          </nav>
+        </header>
 
-        <section className="feature-strip">
-          {featured.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`feature-card ${index === active ? 'feature-card-active' : ''}`}
-              onClick={() => setActive(index)}
-            >
-              <span className="feature-dot" style={{ background: item.color }} />
-              <span>{item.title}</span>
-            </button>
-          ))}
-        </section>
+        <main className="content">
+          {view === 'home' && (
+            <>
+              <section className="hero" style={{ background: `radial-gradient(circle at 20% 15%, rgba(255,255,255,0.18), transparent 12%), radial-gradient(circle at 80% 20%, rgba(96,165,250,0.18), transparent 18%), linear-gradient(135deg, ${featured[active]?.color || '#22c55e'}, rgba(15,23,42,0.82))` }}>
+                <div className="hero-copy">
+                  <div className="eyebrow">{featured[active]?.label || 'Featured'}</div>
+                  <h1>{featured[active]?.title}</h1>
+                  <p>
+                    Explore a cinematic streaming hub for movies, shows, anime, books, and music — all designed for a seamless living-room experience.
+                  </p>
+                  <div className="meta-row">
+                    <span>4K</span>
+                    <span>HD</span>
+                    <span>Drama</span>
+                    <span>2026</span>
+                  </div>
+                  <div className="hero-actions">
+                    <button type="button" className="primary-btn" onClick={() => openPlayer(featured[active])}>Play</button>
+                    <button type="button" className="secondary-btn" onClick={() => openDetails(featured[active])}>Details</button>
+                  </div>
+                </div>
 
-        {rows.map((row) => (
-          <section className="media-row" key={row.name}>
-            <div className="row-header">
-              <h2>{row.name}</h2>
-              <span>See all</span>
-            </div>
+                <div className="hero-poster-wrap">
+                  <div className="hero-poster" aria-label="feature poster" />
+                </div>
+              </section>
 
-            <div className="row-items">
-              {row.items.map((it, index) => (
-                <button key={`${row.name}-${it.id}`} type="button" className="tile" onClick={() => setPlayer({ src: it.src, title: it.title, poster: it.poster })}>
-                  <div className="tile-art" aria-hidden="true" />
-                  <span>{it.title}</span>
-                </button>
+              <section className="feature-strip">
+                {featured.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`feature-card ${index === active ? 'feature-card-active' : ''}`}
+                    onClick={() => setActive(index)}
+                  >
+                    <span className="feature-dot" style={{ background: item.color }} />
+                    <span>{item.title}</span>
+                  </button>
+                ))}
+              </section>
+
+              {rows.map((row) => (
+                <section className="media-row" key={row.name}>
+                  <div className="row-header">
+                    <h2>{row.name}</h2>
+                    <span>See all</span>
+                  </div>
+
+                  <div className="row-items">
+                    {row.items.map((it) => (
+                      <button key={`${row.name}-${it.id}`} type="button" className="tile" onClick={() => openDetails(it)}>
+                        <div className="tile-art" aria-hidden="true" />
+                        <div className="tile-body">
+                          <div className="tile-tag">New</div>
+                          <span>{it.title}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               ))}
-            </div>
-          </section>
-        ))}
-      </main>
+            </>
+          )}
 
-      {player && <Player src={player.src} title={player.title} poster={player.poster} onClose={() => setPlayer(null)} />}
-    </div>
+          {view === 'search' && <Search />}
+          {view === 'library' && <Library />}
+        </main>
+
+        {selectedMedia && (
+          <div className="details-backdrop" onClick={() => setSelectedMedia(null)}>
+            <div className="details-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="details-cover" style={{ background: `linear-gradient(135deg, ${selectedMedia.color}, rgba(15,23,42,0.82))` }} />
+              <div className="details-content">
+                <div className="eyebrow subtle">{selectedMedia.label}</div>
+                <h2>{selectedMedia.title}</h2>
+                <p>{selectedMedia.description}</p>
+                <div className="details-meta">
+                  <span>PG-13</span>
+                  <span>2h 14m</span>
+                  <span>2026</span>
+                </div>
+                <div className="details-actions">
+                  <button className="primary-btn" onClick={() => { openPlayer(selectedMedia); setSelectedMedia(null); }}>Play</button>
+                  <button className="secondary-btn" onClick={() => setSelectedMedia(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {player && <Player src={player.src} title={player.title} poster={player.poster} onClose={() => setPlayer(null)} />}
+      </div>
+    </FocusProvider>
   );
 }
 
