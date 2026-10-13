@@ -1,0 +1,10 @@
+{
+  "id": "com.dotarajesh1247.webostvapp",
+  "version": "0.1.0",
+  "type": "web",
+  "title": "PlayTorrio TV",
+  "main": "index.html",
+  "icon": "icon.svg",
+  "largeIcon": "icon.svg",
+  "splashBackground": "splash.svg"
+}
