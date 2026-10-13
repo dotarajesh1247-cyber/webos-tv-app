@@ -1,292 +1,152 @@
-:root {
-  --bg: #020817;
-  --panel: rgba(15, 23, 42, 0.75);
-  --soft: rgba(148, 163, 184, 0.18);
-  --primary: #22c55e;
-  --white: #f8fafc;
-  --muted: #cbd5e1;
-  --shadow: rgba(15, 23, 42, 0.48);
+import React, { useMemo, useState, useEffect } from 'react';
+import Player from './Player';
+import { fetchHome } from './services/api';
+
+function App(){
+  const [data, setData] = useState(null);
+  const [active, setActive] = useState(0);
+  const [selectedRow, setSelectedRow] = useState(0);
+  const [player, setPlayer] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchHome().then((d) => {
+      if (mounted) setData(d);
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const featured = useMemo(() => data?.featured || [{ id: 1, title: 'Loading...', color: '#22c55e', src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' }], [data]);
+  const rows = useMemo(() => data?.rows || [], [data]);
+
+  const openDetails = (item) => {
+    setSelectedMedia({
+      id: item.id,
+      title: item.title,
+      label: item.label || 'Featured',
+      description: item.description || 'Enjoy premium content with a seamless TV-first experience.',
+      src: item.src,
+      poster: item.poster,
+      color: item.color || '#22c55e'
+    });
+  };
+
+  const openPlayer = (item) => {
+    setPlayer({ src: item.src, title: item.title, poster: item.poster || '' });
+  };
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand-wrap">
+          <div className="brand-mark">P</div>
+          <div>
+            <div className="brand-name">PlayTorrio</div>
+            <div className="brand-sub">TV Experience</div>
+          </div>
+        </div>
+
+        <nav className="nav" aria-label="main navigation">
+          {['Home', 'Movies', 'Series', 'Manga', 'Music', 'Live TV'].map((item, index) => (
+            <button
+              key={item}
+              className={`nav-item ${index === selectedRow ? 'nav-item-active' : ''}`}
+              onClick={() => setSelectedRow(index)}
+              type="button"
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <main className="content">
+        <section className="hero" style={{ background: `radial-gradient(circle at 20% 15%, rgba(255,255,255,0.18), transparent 12%), radial-gradient(circle at 80% 20%, rgba(96,165,250,0.18), transparent 18%), linear-gradient(135deg, ${featured[active]?.color || '#22c55e'}, rgba(15,23,42,0.82))` }}>
+          <div className="hero-copy">
+            <div className="eyebrow">{featured[active]?.label || 'Featured'}</div>
+            <h1>{featured[active]?.title}</h1>
+            <p>
+              Explore a cinematic streaming hub for movies, shows, anime, books, and music — all designed for a seamless living-room experience.
+            </p>
+            <div className="meta-row">
+              <span>4K</span>
+              <span>HD</span>
+              <span>Drama</span>
+              <span>2026</span>
+            </div>
+            <div className="hero-actions">
+              <button type="button" className="primary-btn" onClick={() => openPlayer(featured[active])}>Play</button>
+              <button type="button" className="secondary-btn" onClick={() => openDetails(featured[active])}>Details</button>
+            </div>
+          </div>
+
+          <div className="hero-poster-wrap">
+            <div className="hero-poster" aria-label="feature poster" />
+          </div>
+        </section>
+
+        <section className="feature-strip">
+          {featured.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`feature-card ${index === active ? 'feature-card-active' : ''}`}
+              onClick={() => setActive(index)}
+            >
+              <span className="feature-dot" style={{ background: item.color }} />
+              <span>{item.title}</span>
+            </button>
+          ))}
+        </section>
+
+        {rows.map((row) => (
+          <section className="media-row" key={row.name}>
+            <div className="row-header">
+              <h2>{row.name}</h2>
+              <span>See all</span>
+            </div>
+
+            <div className="row-items">
+              {row.items.map((it) => (
+                <button key={`${row.name}-${it.id}`} type="button" className="tile" onClick={() => openDetails(it)}>
+                  <div className="tile-art" aria-hidden="true" />
+                  <div className="tile-body">
+                    <div className="tile-tag">New</div>
+                    <span>{it.title}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+      </main>
+
+      {selectedMedia && (
+        <div className="details-backdrop" onClick={() => setSelectedMedia(null)}>
+          <div className="details-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="details-cover" style={{ background: `linear-gradient(135deg, ${selectedMedia.color}, rgba(15,23,42,0.82))` }} />
+            <div className="details-content">
+              <div className="eyebrow subtle">{selectedMedia.label}</div>
+              <h2>{selectedMedia.title}</h2>
+              <p>{selectedMedia.description}</p>
+              <div className="details-meta">
+                <span>PG-13</span>
+                <span>2h 14m</span>
+                <span>2026</span>
+              </div>
+              <div className="details-actions">
+                <button className="primary-btn" onClick={() => { openPlayer(selectedMedia); setSelectedMedia(null); }}>Play</button>
+                <button className="secondary-btn" onClick={() => setSelectedMedia(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {player && <Player src={player.src} title={player.title} poster={player.poster} onClose={() => setPlayer(null)} />}
+    </div>
+  );
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-  height: 100%;
-  background: var(--bg);
-  color: var(--white);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-body {
-  background: radial-gradient(circle at top, rgba(59, 130, 246, 0.15), transparent 25%), #020817;
-}
-
-button {
-  font: inherit;
-}
-
-.app-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, rgba(2, 8, 23, 0.94), rgba(15, 23, 42, 0.9));
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22px 42px 14px;
-  position: sticky;
-  top: 0;
-  backdrop-filter: blur(10px);
-  background: rgba(2, 8, 23, 0.35);
-  z-index: 10;
-}
-
-.brand-wrap {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.brand-mark {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #22c55e, #0ea5e9);
-  color: white;
-  font-weight: 800;
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
-}
-
-.brand-name {
-  font-size: 1.12rem;
-  font-weight: 800;
-}
-
-.brand-sub {
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.nav {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.nav-item {
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  color: var(--white);
-  border-radius: 999px;
-  padding: 10px 18px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-item:hover,
-.nav-item-active {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: rgba(34, 197, 94, 0.5);
-  transform: translateY(-1px);
-}
-
-.content {
-  padding: 24px 42px 50px;
-}
-
-.hero {
-  display: flex;
-  justify-content: space-between;
-  gap: 28px;
-  border-radius: 28px;
-  padding: 36px 38px;
-  min-height: 300px;
-  box-shadow: 0 30px 45px rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.hero-copy {
-  max-width: 580px;
-}
-
-.eyebrow {
-  display: inline-block;
-  background: rgba(15, 23, 42, 0.35);
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 999px;
-  padding: 7px 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-}
-
-.hero-copy h1 {
-  margin: 18px 0 12px;
-  font-size: clamp(2.1rem, 4vw, 4rem);
-  line-height: 1.05;
-}
-
-.hero-copy p {
-  margin: 0;
-  color: rgba(248, 250, 252, 0.85);
-  font-size: 1.04rem;
-  line-height: 1.6;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 14px;
-  margin-top: 24px;
-}
-
-.primary-btn,
-.secondary-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 14px 22px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.primary-btn {
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-.secondary-btn {
-  background: rgba(15, 23, 42, 0.38);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.12);
-}
-
-.hero-poster {
-  flex: 0 0 320px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(15,23,42,0.3));
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 26px;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-poster::before {
-  content: "";
-  position: absolute;
-  inset: 16px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(15,23,42,0.2));
-  box-shadow: inset 0 0 26px rgba(255,255,255,0.08);
-}
-
-.feature-strip {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 26px;
-}
-
-.feature-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  color: var(--white);
-  border-radius: 14px;
-  padding: 12px 18px;
-  cursor: pointer;
-}
-
-.feature-card-active {
-  background: rgba(59, 130, 246, 0.12);
-  border-color: rgba(96,165,250,0.8);
-}
-
-.feature-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.media-row {
-  margin-top: 30px;
-}
-
-.row-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.row-header h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.row-header span {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.row-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 18px;
-}
-
-.tile {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.8));
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  color: var(--white);
-  border-radius: 18px;
-  padding: 0;
-  overflow: hidden;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.tile:hover {
-  transform: translateY(-2px);
-}
-
-.tile-art {
-  height: 170px;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.5), rgba(59, 130, 246, 0.3));
-  border-bottom: 1px solid rgba(255,255,255,0.12);
-}
-
-.tile span {
-  display: block;
-  padding: 14px 16px 16px;
-  font-weight: 600;
-}
-
-@media (max-width: 900px) {
-  .topbar,
-  .content {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-
-  .hero {
-    flex-direction: column;
-  }
-
-  .hero-poster {
-    min-height: 180px;
-    flex-basis: 180px;
-  }
-}
+export default App;
